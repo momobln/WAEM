@@ -1,6 +1,6 @@
 import { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
-import { PrismaAdapter } from "@next-auth/prisma-adapter";
+import { PrismaAdapter } from "@next-auth/prisma-adapter"; 
 import prisma from "@/lib/prisma";
 
 export const authOptions: NextAuthOptions = {
@@ -21,8 +21,8 @@ export const authOptions: NextAuthOptions = {
       }
       return session;
     },
-    async redirect({ url, baseUrl }) {
-      return baseUrl + "/dashboard"; // ← بعد الدخول يذهب للـ dashboard
+    async redirect({ baseUrl }) {
+      return `${baseUrl}/`;
     },
   },
   pages: {

@@ -48,7 +48,7 @@ export default function Dashboard() {
             </p>
 
             <button
-              onClick={() => signOut()}
+              onClick={() => signOut({ callbackUrl: "/login" })}
               style={{
                 backgroundColor: "#2563eb",
                 color: "#fff",
