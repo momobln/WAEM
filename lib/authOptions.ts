@@ -12,12 +12,28 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   secret: process.env.NEXTAUTH_SECRET,
-  session: { strategy: "database" },
+
+  session: { strategy: "jwt" },
   callbacks: {
-    async session({ session, user }) {
+
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+        token.role = user.role;
+      }
+      return token;
+    },
+    async session({ session, token }) {
       if (session.user) {
-        (session.user as { id?: string; role?: string }).id = user.id;
-        (session.user as { id?: string; role?: string }).role = user.role;
+
+
+        (session.user as { id?: string; role?: string }).id = token.id as
+          | string
+          | undefined;
+        (session.user as { id?: string; role?: string }).role = token.role as
+          | "ADMIN"
+          | "USER"
+          | undefined;
       }
       return session;
     },

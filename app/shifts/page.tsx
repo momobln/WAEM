@@ -222,7 +222,6 @@ export default function ShiftsPage() {
       </div>
 
       
-      
       <ul style={{ display: "grid", gap: 12, padding: 0, listStyle: "none" }}>
         {shifts.map(shift => (
           <li
