@@ -1,10 +1,16 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useSession, signIn, signOut } from "next-auth/react";
+
+type Shift = {
+  id: string;
+  title: string;
+  location: string;
+  start: string;
+  end: string;
+};
 
 export default function ShiftsPage() {
-  const { data: session, status } = useSession();
-  const [shifts, setShifts] = useState<any[]>([]);
+  const [shifts, setShifts] = useState<Shift[]>([]);
   const [title, setTitle] = useState("");
   const [location, setLocation] = useState("");
   const [start, setStart] = useState("");
@@ -15,57 +21,44 @@ export default function ShiftsPage() {
     if (res.ok) setShifts(await res.json());
   };
 
-  useEffect(() => {
-    if (status === "authenticated") load();
-  }, [status]);
-
-  const addShift = async () => {
+  const createShift = async () => {
     await fetch("/api/shifts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title, location, start, end }),
     });
-    setTitle("");
-    setLocation("");
-    setStart("");
-    setEnd("");
-    await load();
+    load();
   };
 
-  if (status === "loading") return <p>Loading...</p>;
-  if (!session)
-    return (
-      <div style={{ padding: 40 }}>
-        <p>You must sign in first</p>
-        <button onClick={() => signIn("google")}>Sign in with Google</button>
-      </div>
-    );
+  const deleteShift = async (id: string) => {
+    await fetch(`/api/shifts/${id}`, { method: "DELETE" });
+    load();
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
 
   return (
-    <div style={{ padding: 40 }}>
-      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-        <strong>{session.user?.email}</strong>
-        <button onClick={() => signOut()}>Sign out</button>
-      </div>
+    <main style={{ maxWidth: 600, margin: "auto", padding: 20 }}>
+      <h2>My Shifts</h2>
 
-      <h1>Shifts</h1>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
-        <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Title" />
-        <input value={location} onChange={e => setLocation(e.target.value)} placeholder="Location" />
+      <div style={{ marginBottom: 20 }}>
+        <input placeholder="Title" value={title} onChange={e => setTitle(e.target.value)} />
+        <input placeholder="Location" value={location} onChange={e => setLocation(e.target.value)} />
         <input type="datetime-local" value={start} onChange={e => setStart(e.target.value)} />
         <input type="datetime-local" value={end} onChange={e => setEnd(e.target.value)} />
-        <button onClick={addShift}>Add</button>
+        <button onClick={createShift}>Add Shift</button>
       </div>
 
       <ul>
         {shifts.map(s => (
           <li key={s.id}>
-            <strong>{s.title}</strong> — {s.location}  
-            <br />
-            {new Date(s.start).toLocaleString()} → {new Date(s.end).toLocaleString()}
+            {s.title} - {s.location} ({s.start} → {s.end}){" "}
+            <button onClick={() => deleteShift(s.id)}>Delete</button>
           </li>
         ))}
       </ul>
-    </div>
+    </main>
   );
 }

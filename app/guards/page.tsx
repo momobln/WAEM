@@ -1,10 +1,16 @@
 "use client";
-import { useEffect, useState } from "react";
-import { useSession, signOut, signIn } from "next-auth/react";
+import { useState, useEffect } from "react";
+
+type Guard = {
+  id: string;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  role: "ADMIN" | "USER";
+};
 
 export default function GuardsPage() {
-  const { data: session, status } = useSession();
-  const [guards, setGuards] = useState<any[]>([]);
+  const [guards, setGuards] = useState<Guard[]>([]);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -14,11 +20,7 @@ export default function GuardsPage() {
     if (res.ok) setGuards(await res.json());
   };
 
-  useEffect(() => {
-    if (status === "authenticated") load();
-  }, [status]);
-
-  const addGuard = async () => {
+  const createGuard = async () => {
     await fetch("/api/guards", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -27,48 +29,39 @@ export default function GuardsPage() {
     setName("");
     setEmail("");
     setPhone("");
-    await load();
+    load();
   };
 
   const deleteGuard = async (id: string) => {
     await fetch(`/api/guards/${id}`, { method: "DELETE" });
-    await load();
+    load();
   };
 
-  if (status === "loading") return <p>Loading...</p>;
-  if (!session)
-    return (
-      <div style={{ padding: 40 }}>
-        <p>You must sign in first</p>
-        <button onClick={() => signIn("google")}>Sign in with Google</button>
-      </div>
-    );
+  useEffect(() => {
+    load();
+  }, []);
 
   return (
-    <div style={{ padding: 40 }}>
-      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-        <strong>{session.user?.email}</strong>
-        <button onClick={() => signOut()}>Sign out</button>
-      </div>
+    <main style={{ maxWidth: 600, margin: "auto", padding: 20 }}>
+      <h2>Manage Guards</h2>
 
-      <h1>Guards</h1>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
-        <input value={name} onChange={e => setName(e.target.value)} placeholder="Name" />
-        <input value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" />
-        <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="Phone" />
-        <button onClick={addGuard}>Add Guard</button>
+      <div style={{ marginBottom: 20 }}>
+        <input placeholder="Name" value={name} onChange={e => setName(e.target.value)} />
+        <input placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} />
+        <input placeholder="Phone" value={phone} onChange={e => setPhone(e.target.value)} />
+        <button onClick={createGuard}>Add Guard</button>
       </div>
 
       <ul>
         {guards.map(g => (
-          <li key={g.id} style={{ marginBottom: 8 }}>
-            <strong>{g.name}</strong> — {g.email} {g.phone && `(${g.phone})`}
-            <button style={{ marginLeft: 8 }} onClick={() => deleteGuard(g.id)}>
+          <li key={g.id}>
+            {g.name} ({g.email}) - {g.role}
+            <button onClick={() => deleteGuard(g.id)} style={{ marginLeft: 10 }}>
               Delete
             </button>
           </li>
         ))}
       </ul>
-    </div>
+    </main>
   );
 }

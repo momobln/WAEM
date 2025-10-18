@@ -9,13 +9,7 @@ datasource db {
 
 enum Role {
   ADMIN
-  GUARD
-}
-
-enum SwapStatus {
-  PENDING
-  APPROVED
-  REJECTED
+  USER
 }
 
 model User {
@@ -24,12 +18,13 @@ model User {
   email         String?   @unique
   emailVerified DateTime?
   image         String?
-  role          Role      @default(GUARD)
+  role          Role      @default(USER)
+  phone         String?
   accounts      Account[]
   sessions      Session[]
+  shifts        Shift[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-  Shift         Shift[]
 }
 
 model Account {
@@ -59,20 +54,14 @@ model Session {
 }
 
 model Shift {
-  id        String   @id @default(cuid())
-  title     String
-  location  String
-  start     DateTime
-  end       DateTime
-  ownerId   String
+  id       String   @id @default(cuid())
+  title    String
+  location String
+  start    DateTime
+  end      DateTime
+  ownerId  String
+
+  owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
   createdAt DateTime @default(now())
-  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-}
-model Guard {
-  id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  phone     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }

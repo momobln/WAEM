@@ -1,10 +1,16 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import prisma from "@/lib/prisma";
 
 export async function requireUser() {
   const session = await getServerSession(authOptions);
-  if (!session || !session.user) {
+  if (!session || !session.user?.email)
     throw new Error("Unauthorized");
-  }
-  return session;
+
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email },
+  });
+
+  if (!user) throw new Error("User not found");
+  return user;
 }

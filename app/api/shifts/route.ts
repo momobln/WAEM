@@ -1,30 +1,36 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import prisma from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 
-// Get all shifts
-export async function GET() {
-  const shifts = await prisma.shift.findMany({ orderBy: { start: "asc" } });
-  return NextResponse.json(shifts);
-}
-
-// Create a shift
+// CREATE shift
 export async function POST(req: Request) {
-  const session = await requireUser();
-  const body = await req.json();
+  const user = await requireUser();
+  const data = await req.json();
 
-  if (!body.title || !body.location || !body.start || !body.end) {
-    return NextResponse.json({ error: "Missing fields" }, { status: 400 });
-  }
-
-  const created = await prisma.shift.create({
+  const shift = await prisma.shift.create({
     data: {
-      title: body.title,
-      location: body.location,
-      start: new Date(body.start),
-      end: new Date(body.end),
+      title: data.title,
+      location: data.location,
+      start: new Date(data.start),
+      end: new Date(data.end),
+      ownerId: user.id,
     },
   });
 
-  return NextResponse.json(created);
+  return NextResponse.json(shift);
+}
+
+// READ shifts
+export async function GET() {
+  const user = await requireUser();
+
+  const shifts =
+    user.role === "ADMIN"
+      ? await prisma.shift.findMany({ include: { owner: true } })
+      : await prisma.shift.findMany({
+          where: { ownerId: user.id },
+          include: { owner: true },
+        });
+
+  return NextResponse.json(shifts);
 }
