@@ -1,8 +1,17 @@
 "use client";
+import { useEffect } from "react";
 import { signOut, useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 export default function Dashboard() {
-  const { data: session } = useSession();
+  const router = useRouter();
+  const { data: session, status } = useSession();
+
+  useEffect(() => {
+    if (status === "unauthenticated") router.replace("/login");
+  }, [status, router]);
+
+  const isLoading = status === "loading" || status === "unauthenticated";
 
   return (
     <main
@@ -31,7 +40,7 @@ export default function Dashboard() {
           WORK TIME
         </h1>
 
-        {session ? (
+        {session && !isLoading ? (
           <>
             <p style={{ marginBottom: "20px", fontSize: "1rem" }}>
               WELCOME:{" "}

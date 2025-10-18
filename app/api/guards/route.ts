@@ -2,36 +2,36 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 
-// 🟢 GET: جميع المستخدمين (Admins فقط)
-export async function GET() {
-  const user = await requireUser();
+// 🔵 Update user (self or Admin)
+export async function PUT(
+  req: Request,
+  context: { params: Promise<{ id: string }> }
+) {
+  const current = await requireUser();
+  const data = await req.json();
+  const { id } = await context.params;
 
-  if (user.role !== "ADMIN")
+  // لا يمكن لغير الأدمن تعديل غير نفسه
+  if (current.role !== "ADMIN" && current.id !== id)
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const guards = await prisma.user.findMany({
-    select: { id: true, name: true, email: true, phone: true, role: true },
+  const updated = await prisma.user.update({
+    where: { id },
+    data: { name: data.name, phone: data.phone },
   });
 
-  return NextResponse.json(guards);
+  return NextResponse.json(updated);
 }
 
-// 🟡 POST: إنشاء مستخدم جديد (Admin فقط)
-export async function POST(req: Request) {
-  const user = await requireUser();
-  if (user.role !== "ADMIN")
+// 🔴 Delete (Admins only)
+export async function DELETE(
+  _: Request,
+  context: { params: Promise<{ id: string }> }
+) {
+  const current = await requireUser();
+  if (current.role !== "ADMIN")
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-
-  const data = await req.json();
-
-  const guard = await prisma.user.create({
-    data: {
-      name: data.name,
-      email: data.email,
-      phone: data.phone ?? null,
-      role: data.role ?? "USER",
-    },
-  });
-
-  return NextResponse.json(guard);
+  const { id } = await context.params;
+  await prisma.user.delete({ where: { id } });
+  return NextResponse.json({ ok: true });
 }
