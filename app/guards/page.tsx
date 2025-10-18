@@ -1,5 +1,6 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useSession } from "next-auth/react";
 
 type Guard = {
   id: string;
@@ -9,23 +10,65 @@ type Guard = {
   role: "ADMIN" | "USER";
 };
 
+const isRedirectPayload = (
+  payload: unknown
+): payload is { redirect?: string } =>
+  Boolean(payload && typeof payload === "object" && "redirect" in payload);
+
+const redirectFromPayload = (payload: unknown) => {
+  if (isRedirectPayload(payload) && payload.redirect) {
+    window.location.href = payload.redirect;
+    return true;
+  }
+  return false;
+};
+
+const redirectFromResponse = (res: Response, payload: unknown) => {
+  if (res.redirected) {
+    window.location.href = res.url;
+    return true;
+  }
+  return redirectFromPayload(payload);
+};
+
+const readJson = async (res: Response) => {
+  const contentType = res.headers.get("content-type");
+  if (contentType && contentType.includes("application/json")) {
+    return res.json();
+  }
+  return null;
+};
+
 export default function GuardsPage() {
+  const { data: session } = useSession();
   const [guards, setGuards] = useState<Guard[]>([]);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
 
-  const load = async () => {
+
+  const load = useCallback(async () => {
     const res = await fetch("/api/guards");
-    if (res.ok) setGuards(await res.json());
-  };
+    
+    const data = await readJson(res);
+    if (redirectFromResponse(res, data)) return;
+    if (res.ok && Array.isArray(data)) setGuards(data);
+  }, []);
 
   const createGuard = async () => {
-    await fetch("/api/guards", {
+
+    if (!name || !email) {
+      alert("Name and email are required.");
+      return;
+    }
+
+    const res = await fetch("/api/guards", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, email, phone }),
     });
+    const data = await readJson(res);
+    if (redirectFromResponse(res, data)) return;
     setName("");
     setEmail("");
     setPhone("");
@@ -33,17 +76,24 @@ export default function GuardsPage() {
   };
 
   const deleteGuard = async (id: string) => {
-    await fetch(`/api/guards/${id}`, { method: "DELETE" });
+
+    const res = await fetch(`/api/guards/${id}`, { method: "DELETE" });
+    const data = await readJson(res);
+    if (redirectFromResponse(res, data)) return;
     load();
   };
 
   useEffect(() => {
-    load();
-  }, []);
+
+    void load();
+  }, [load]);
 
   return (
     <main style={{ maxWidth: 600, margin: "auto", padding: 20 }}>
       <h2>Manage Guards</h2>
+      <p style={{ color: "#64748b", fontSize: 14 }}>
+        Signed in as {session?.user?.email} ({session?.user?.role})
+      </p>
 
       <div style={{ marginBottom: 20 }}>
         <input placeholder="Name" value={name} onChange={e => setName(e.target.value)} />

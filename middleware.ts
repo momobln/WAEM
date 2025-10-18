@@ -15,15 +15,15 @@ export async function middleware(req: NextRequest) {
 
   // 🟡 مستخدم عادي يدخل إلى صفحة الحراس => يُعاد إلى Dashboard
   if (pathname.startsWith("/guards") && token.email !== ADMIN_EMAIL) {
-    return NextResponse.redirect(new URL("/dashboard", req.url));
+
+    return NextResponse.redirect(new URL("/", req.url));
   }
 
   // 🟡 المستخدم يحاول الوصول إلى لوحة الإدارة أو API محظور
   if (pathname.startsWith("/api/guards") && token.email !== ADMIN_EMAIL) {
-    return new NextResponse(
-      JSON.stringify({ error: "Access denied: Admin only." }),
-      { status: 403, headers: { "Content-Type": "application/json" } }
-    );
+    
+    
+    return NextResponse.json({ redirect: "/" });
   }
 
   // 🟢 كل شيء آخر مسموح

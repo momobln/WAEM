@@ -1,15 +1,20 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { requireUser } from "@/lib/auth";
+import { redirectToDashboard, requireUser } from "@/lib/auth";
 
 // 🔵 Update user (self or Admin)
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
-  const current = await requireUser();
-  const data = await req.json();
+export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+  const result = await requireUser(request);
+  if ("redirect" in result) return result.redirect;
+
+  const { user: current } = result;
+  if (!current) return redirectToDashboard(request);
+
+  const data = await request.json();
 
   // لا يمكن لغير الأدمن تعديل غير نفسه
   if (current.role !== "ADMIN" && current.id !== params.id)
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    return redirectToDashboard(request);
 
   const updated = await prisma.user.update({
     where: { id: params.id },
@@ -20,10 +25,12 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 }
 
 // 🔴 Delete (Admins only)
-export async function DELETE(_: Request, { params }: { params: { id: string } }) {
-  const current = await requireUser();
-  if (current.role !== "ADMIN")
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+  const result = await requireUser(request);
+  if ("redirect" in result) return result.redirect;
+
+  const { user: current } = result;
+  if (!current || current.role !== "ADMIN") return redirectToDashboard(request);
 
   await prisma.user.delete({ where: { id: params.id } });
   return NextResponse.json({ ok: true });

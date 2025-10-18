@@ -1,24 +1,41 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { requireUser } from "@/lib/auth";
+import { redirectToDashboard, requireUser } from "@/lib/auth";
 
 // 🟢 عرض جميع الشفتات
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const result = await requireUser(request);
+  if ("redirect" in result) return result.redirect;
+
+  const { user } = result;
+  if (!user) return redirectToDashboard(request);
+
   const shifts = await prisma.shift.findMany({
-    include: { owner: true },
+    where: user.role === "ADMIN" ? {} : { ownerId: user.id },
+    include: {
+      owner: {
+        select: { id: true, name: true, email: true, role: true },
+      },
+    },
     orderBy: { start: "asc" },
   });
+
   return NextResponse.json(shifts);
 }
 
 // 🟢 إضافة شفت جديد
-export async function POST(req: Request) {
-  const user = await requireUser();
-  const data = await req.json();
+export async function POST(request: NextRequest) {
+  const result = await requireUser(request);
+  if ("redirect" in result) return result.redirect;
+
+  const { user } = result;
+  if (!user) return redirectToDashboard(request);
+
+  const data = await request.json();
 
   // المستخدم العادي يمكنه فقط إضافة شفت لنفسه
   if (user.role !== "ADMIN" && data.ownerId && data.ownerId !== user.id) {
-    return ("/dashboard");
+     return redirectToDashboard(request);
   }
 
   const created = await prisma.shift.create({
